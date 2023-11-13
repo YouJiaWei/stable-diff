@@ -1,50 +1,167 @@
 import PySimpleGUI as sg
 import subprocess
 import os
+import numpy as np
 # import camera5
-import cv2
+# import cv2
 import sys
+os.environ["OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"] = "0"
+import cv2
 sg.theme('LightBlue')   # デザインテーマの設定
 
 # def func_button_ok(name):
+cap = cv2.VideoCapture(0)
 
+recording = False
 #    window['ket_name'].update(name)
 #    pass
-def make_main():
-# ウィンドウに配置するコンポーネント
-    main_layout = [  [sg.Text('画像AI生成ツール',font=('Arial',20),text_color='Blue')],#background_color='White'
-            # [sg.Text('ここは2行目：適当に文字を入力してください'), sg.InputText()],
-            [sg.Frame("手順:", [[sg.Text('①カメラ起動し、キーボード"a"で写真を撮ってから、"q"で閉じる')],[sg.Text('②以下の選択から好きなパターンを選んでください')],[sg.Text('③パターンを押した後、画像生成が完了するまでお待ちください・・・')],[sg.Text('④AI画像が表示された際に、ウインドウズの"x"ボタンを押下すると、AI画像生成処理が止まり、メニュー画面に戻る')],[sg.Text('※AI画像がdata/srcフォルダに保存されたため、カバーされないように別の名前に変更必要')]])], 
-            [sg.Button('カメラ起動',size=(10,2),button_color=('#ffffff', '#68be8d'))] ,
-            [sg.Button('男性風(リアル)',size=(20, 2),button_color=('#ffffff', '#2ca9e1'),font=('Arial',12)), sg.Button('女性風(リアル)',size=(20, 2),button_color=('#ffffff', '#2ca9e1'),font=('Arial',12))],
-            [sg.Button('男性風(アニメ)',size=(20, 2),button_color=('#ffffff', '#cc7eb1'),font=('Arial',12)), sg.Button('女性風(アニメ)',size=(20, 2),button_color=('#ffffff', '#cc7eb1'),font=('Arial',12))],
-            [sg.Button('男性風(イラスト)',size=(20, 2),button_color=('#ffffff', '#f6ad49'),font=('Arial',12)), sg.Button('女性風(イラスト)',size=(20, 2),button_color=('#ffffff', '#f6ad49'),font=('Arial',12))],
-            [sg.Button("Open",size=(20, 2),button_color=('#ffffff', '#f6ad49'))],
-            # [sg.Text(size=(73,2), key='ket_name')],
 
-            [sg.Image("onepiece06_chopper.png"),sg.Button('閉じる',size=(10,2))] ,
+# ウィンドウに配置するコンポーネント
+def make_main():
+    layout = [  
+            [sg.Column([
+            [sg.Push(),sg.Text('画像AI生成ツール',font=('Arial',20,"bold"),text_color='Blue'),sg.Push()],#background_color='White'
+            # [sg.Text('ここは2行目：適当に文字を入力してください'), sg.InputText()],
+            [sg.Frame("手順:", [[sg.Text('①カメラ起動し、キーボード"a"で写真を撮ってから、"q"で閉じる',font=('Arial',16,"bold"))],[sg.Text('②以下の選択から好きなパターンを選んでください',font=('Arial',16,"bold"))],[sg.Text('③パターンを押した後、画像生成が完了するまでお待ちください・・・',font=('Arial',16,"bold"))],[sg.Text('④AI画像が表示された際に、ウインドウズの"x"ボタンを押下すると、AI画像生成処理が止まり、メニュー画面に戻る',font=('Arial',16,"bold"))],[sg.Text('※AI画像がdata/srcフォルダに保存されたため、カバーされないように別の名前に変更必要',font=('Arial',16,"bold"),text_color='#e60033')]])], 
+            [sg.Button('カメラ起動',size=(10,2),button_color=('#ffffff', '#68be8d'),font=('Arial',16,"bold"))],
+            [sg.Push(),sg.Button('男性風(リアル)',size=(20, 2),button_color=('#ffffff', '#2ca9e1'),font=('Arial',16,"bold")),sg.Button('男性風(アニメ)',size=(20, 2),button_color=('#ffffff', '#cc7eb1'),font=('Arial',16,"bold")),sg.Button('男性風(イラスト)',size=(20, 2),button_color=('#ffffff', '#f6ad49'),font=('Arial',16,"bold")),sg.Push()],
+            [sg.Push(),sg.Button('女性風(リアル)',size=(20, 2),button_color=('#ffffff', '#2ca9e1'),font=('Arial',16,"bold")), sg.Button('女性風(アニメ)',size=(20, 2),button_color=('#ffffff', '#cc7eb1'),font=('Arial',16,"bold")),sg.Button('女性風(イラスト)',size=(20, 2),button_color=('#ffffff', '#f6ad49'),font=('Arial',16,"bold")),sg.Push()],
+            [sg.Button("Open"),sg.Button("Open1")],
+            [sg.Push(),sg.Image("onepiece06_chopper.png"),sg.Push()] ,
             # [sg.Listbox(values=sg.theme_list(), size=(20, 12), key='-LIST-', enable_events=True)]
+            #,scrollable=True,size=(1920,1080),
+            # [sg.Button('閉じる',size=(10,2),button_color=('#ffffff', '#e60033'),font=('Arial',12,"bold")),sg.Push()],
+            ], justification='c')]
             
             ]
-
-
-
-    # ウィンドウの生成
-    return sg.Window('AI生成プログラム', main_layout, finalize=True)
+    return sg.Window('AI生成プログラム', layout,resizable=True)
 
 def make_sub():
+    # ------------ サブウィンドウ作成 ------------
     sub_layout = [[sg.Text("サブウィンドウ")],
             [sg.Button("Close")],
             [sg.Button("Exit")]]
     return sg.Window("サブウィンドウ", sub_layout, finalize=True)
 
+def make_sub1():
+        # レイアウト（1行目：テキスト、2行目：映像画面、3行目：ボタン、ボタン、ボタン）
+    layout = [[sg.Text('OpenCVによるカメラデモ ', size=(20, 3), justification='center', font='Helvetica 20')],
+                  [sg.Image(filename='', key='image')],
+                  [sg.Button('開始', size=(10, 3), font='Helvetica 14'),sg.Button('撮影', size=(10, 3), font='Helvetica 14'),sg.Button('終了1', size=(10, 3), font='Helvetica 14'), ]]
+
+    # ウィンドウの生成
+    # window = sg.Window(' デモアプリ - OpenCVによるカメラアプリ',layout, location=(200, 10))
+    return sg.Window(' デモアプリ - OpenCVによるカメラアプリ',layout, location=(200, 10))
+
+    # キャプチャするカメラを設定
+    # cap = cv2.VideoCapture(0)
+
+    # recording = False
+
+    #　イベントループ
+    # while True:
+        # ret, frame = cap.read()
+        # frame = cv2.resize(frame, (800, 600))
+        # #　イベント取得
+        # event, values = window.read(timeout=20)
+
+        # #　「Exit」ボタン押下時、ウィンドウ右上の×押下時の処理
+        # if event == '終了1' or event == sg.WIN_CLOSED:
+        #     window.close()
+        #     window = make_main()
+
+        # #　「Record」ボタン押下時の処理
+        # elif event == '開始':
+        #     #　撮影を開始する
+        #     recording = True
+
+        # #　「Stop」ボタン押下時の処理
+        # elif event == '撮影':
+        #     # 撮影を停止する
+        #     recording = False
+        #     ret, frame = cap.read()
+        #     cv2.imwrite("data/src/image12312.jpg",frame)
+            
+        #     #　映像を消す
+        #     # img = np.full((480, 640), 255)
+        #     # imgbytes = cv2.imencode('.png', img)[1].tobytes()
+        #     # window['image'].update(data=imgbytes)
+
+        # #　録画フラグがTrueなら、撮影を開始する
+        # if recording:
+        #     #　カメラ映像を取得する
+        #     ret, frame = cap.read()
+        #     frame = cv2.resize(frame, (800, 600))
+        #     #　映像をメモリにエンコードする
+        #     imgbytes = cv2.imencode('.png', frame)[1].tobytes()  # ditto
+        #     #　映像を表示する
+        #     window['image'].update(data=imgbytes)
+
+#　メイン関数をCALL
+# main()
+
 window=make_main()
+
+
+
 
 # イベントループ
 while True:
-    event, values = window.read()
-    if event == sg.WIN_CLOSED or event == '閉じる':
+    # event, values = window.read()
+    # cap = cv2.VideoCapture(0)
+
+    # recording = False
+
+    ret, frame = cap.read()
+    frame = cv2.resize(frame, (800, 600))
+    #　イベント取得
+    event, values = window.read(timeout=20)
+
+    #　「Exit」ボタン押下時、ウィンドウ右上の×押下時の処理
+    if event == '終了1' or event == sg.WIN_CLOSED:
+        window.close()
+        window = make_main()
+    #　「Record」ボタン押下時の処理
+    elif event == '開始':
+        #　撮影を開始する
+        recording = True
+
+    #　「Stop」ボタン押下時の処理
+    elif event == '撮影':
+        # 撮影を停止する
+        recording = False
+        ret, frame = cap.read()
+        cv2.imwrite("data/src/image12312.jpg",frame)
+            
+            #　映像を消す
+            # img = np.full((480, 640), 255)
+            # imgbytes = cv2.imencode('.png', img)[1].tobytes()
+            # window['image'].update(data=imgbytes)
+
+    #　録画フラグがTrueなら、撮影を開始する
+    if recording:
+        #　カメラ映像を取得する
+        ret, frame = cap.read()
+        frame = cv2.resize(frame, (800, 600))
+        #　映像をメモリにエンコードする
+        imgbytes = cv2.imencode('.png', frame)[1].tobytes()  # ditto
+        #　映像を表示する
+        window['image'].update(data=imgbytes)
+
+    elif event == sg.WIN_CLOSED or event == '閉じる':
         break
+
+    elif event == "Open1":
+        # メインウィンドウを閉じて、サブウィンドウを作成して表示する
+        window.close()
+        window = make_sub1()
+
+     # Closeボタンが押された場合
+    elif event == "Close":
+        # サブウィンドウを閉じて、メインウィンドウを作成して表示する
+        window.close()
+        window = make_main()
+        
 
     elif event == 'カメラ起動':
     # sg.popup_auto_close("AI画像生成中です・・・・・・",title="AI画面生成",auto_close_duration=1)
@@ -80,18 +197,8 @@ while True:
         # func_button_ok('男性風画像生成中・・・')
         # sg.popup_auto_close("AI画像生成中です・・・・・・",title="AI画面生成",auto_close_duration=1)
         subprocess.run(['python', 'photo_illust_man.py'])
-
-    # Openボタンが押された場合
-    elif event == "Open":
-        # メインウィンドウを閉じて、サブウィンドウを作成して表示する
-        window.close()
-        window = make_sub()
-
-    # Closeボタンが押された場合
-    elif event == "Close":
-        # サブウィンドウを閉じて、メインウィンドウを作成して表示する
-        window.close()
-        window = make_main()
+    
+    
 
 
     
